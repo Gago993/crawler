@@ -12,8 +12,8 @@ $(document).ready(function(){
 		success: function(result){
 
 			var html = "";
-			for (var i = 0; i < result.message.PageDetails.length; i++) {
-				var detail = result.message.PageDetails[i];
+			for (var i = 0; i < result.message.pageDetails.length; i++) {
+				var detail = result.message.pageDetails[i];
 				var htmlNode = list + "Title: " + detail.title + " <br /> " + "Number of orders: " + detail.numQueueOrders + listEnd;
 				html += htmlNode;
 			}
