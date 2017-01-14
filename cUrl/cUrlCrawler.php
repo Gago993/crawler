@@ -37,10 +37,16 @@ var_dump($t);
 var_dump($b);
 return;*/
 
-var_dump(curlApiWrapper("https://www.fiverr.com/", "gigblast/design-highly-unique-conceptual-logo?funnel=b2132309-bd20-415f-8643-e341fc9208d4"));
+
+
+/*
+$gigResponse = curlApiWrapper("https://www.fiverr.com/", "/gigblast/design-2-awesome-business-cards-or-visiting-cards");
+preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
+
+var_dump($gigResponse);
+
 return;
-
-
+*/
 ini_set('max_execution_time', 123456);
 $htmlResponse = curlApiWrapper("https://www.fiverr.com/", "gigblast");
 
@@ -53,9 +59,12 @@ var_dump($a);
 echo $a->text; // "click here"
 //var_dump($dom);
 
-return;*/
+return;
+*/
 
 preg_match("/data-json-path=\"(.*?)\"/si", $htmlResponse, $matches);
+
+
 
 if(!empty($matches)){
     $match = $matches[0];
@@ -71,27 +80,32 @@ if(!empty($matches)){
     foreach($fiverJobsArray as $job) { //foreach element in $arr
         if(isset($job["is_best_seller"])){ continue;}
 
-        $gitTitle = $job["title"];
+        $gigTitle = $job["title"];
         $gigUrl = $job["gig_url"];
+
+        var_dump($gigTitle);
+        var_dump($gigUrl);
+
 
         $gigResponse = curlApiWrapper("https://www.fiverr.com/", $gigUrl);
 
-        var_dump($gigResponse);
         preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
 
 
-       /* return;
         if(!isset($gigMatches) || empty($gigMatches)){
-            var_dump("errror");
-            continue;
+            var_dump("0");
+            $queueNumber = "0";
+        }else{
+            $queueNumber = preg_replace("/[^0-9 ]/", "", $gigMatches[0]);
+            $queueNumber = getFirstNumberInString($queueNumber);
+
+            var_dump($queueNumber);
         }
 
-        $queueNumber = preg_replace("/[^0-9 ]/", "", $gigMatches[0]);
-        $queueNumber = getFirstNumberInString($queueNumber);
-
-        $pageDetailsArray[] = new PageDetails($gitTitle, $queueNumber);*/
+        var_dump("<br/>");
+        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber);
     }
-
+    return;
     echo json_encode($pageDetailsArray);
 }
 
