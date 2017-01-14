@@ -8,7 +8,7 @@
 require('lib/simple_html_dom.php');
 
 // if you are doing ajax with application-json headers
-if (empty($_POST)) {
+if (empty($_POST) || isset($_POST["username"])) {
     return json_response("Input not valid", 400);
 }
 
