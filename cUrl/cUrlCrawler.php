@@ -5,7 +5,8 @@
  * Date: 1/14/2017
  * Time: 1:54 PM
  */
-require('lib/simple_html_dom.php');
+/*require('lib\vendor\autoload.php');
+use PHPHtmlParser\Dom;*/
 
 /*
 $testCase = array(
@@ -30,12 +31,30 @@ if (empty($_POST) || isset($_POST["username"])) {
     echo json_response("Input not valid", 400);
 }*/
 
+/*$t = "234 Orders in Queue\t";
+$b = getFirstNumberInString($t);
+var_dump($t);
+var_dump($b);
+return;*/
 
+var_dump(curlApiWrapper("https://www.fiverr.com/", "gigblast/design-highly-unique-conceptual-logo?funnel=b2132309-bd20-415f-8643-e341fc9208d4"));
+return;
+
+
+ini_set('max_execution_time', 123456);
 $htmlResponse = curlApiWrapper("https://www.fiverr.com/", "gigblast");
 
-/*$htmlResponse = preg_replace("/<script[\s\S]*?>[\s\S]*?<\/script>/", "", $htmlResponse);
-$htmlResponse = preg_replace("/<link[\s\S]*?>/", "", $htmlResponse);
-$htmlResponse = preg_replace("/<meta[\s\S]*?>/", "", $htmlResponse);*/
+
+
+/*$dom = new Dom;
+$dom->load($htmlResponse);
+$a = $dom->find('div[data-json-path]')[0];
+var_dump($a);
+echo $a->text; // "click here"
+//var_dump($dom);
+
+return;*/
+
 preg_match("/data-json-path=\"(.*?)\"/si", $htmlResponse, $matches);
 
 if(!empty($matches)){
@@ -43,38 +62,58 @@ if(!empty($matches)){
     $match = str_replace("data-json-path=\"","",$match);
     $match = str_replace("\"","", $match);
 
-    $test = curlApiWrapper("https://www.fiverr.com/", $match);
+    $ageDetailsArray = array();
 
-    $fiverJobsArray = json_decode($test,true)["gigs"];
+    $jobResponse = curlApiWrapper("https://www.fiverr.com/", $match);
+
+    $fiverJobsArray = json_decode($jobResponse,true)["gigs"];
 
     foreach($fiverJobsArray as $job) { //foreach element in $arr
         if(isset($job["is_best_seller"])){ continue;}
-        var_dump($job["title"]);
-        var_dump($job["gig_url"]);
-        echo "<br/>";
+
+        $gitTitle = $job["title"];
+        $gigUrl = $job["gig_url"];
+
+        $gigResponse = curlApiWrapper("https://www.fiverr.com/", $gigUrl);
+
+        var_dump($gigResponse);
+        preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
+
+
+       /* return;
+        if(!isset($gigMatches) || empty($gigMatches)){
+            var_dump("errror");
+            continue;
+        }
+
+        $queueNumber = preg_replace("/[^0-9 ]/", "", $gigMatches[0]);
+        $queueNumber = getFirstNumberInString($queueNumber);
+
+        $pageDetailsArray[] = new PageDetails($gitTitle, $queueNumber);*/
     }
 
-
-    return;
+    echo json_encode($pageDetailsArray);
 }
 
-return;
-//$htmlResponse = preg_replace("/<html>/", "", $htmlResponse);
-$html = str_get_html($htmlResponse);
-
-//var_dump("" .$htmlResponse ."");
-$ret = $html->find('*[data-json-path]',0);
 
 
 
-echo $tag;
-//echo json_encode($html);
+function getFirstNumberInString($string){
+    if(!isset($string) || is_null($string))
+        return "";
+    $string = trim($string);
+    preg_match('/[0-9]*/si', $string, $m);
+    return $m[0];
+}
 
-return;
 
 
+function getGigQuery($gigId, $userId){
 
-//function getDataFrom
+    "/gigs/other_gigs_by?gig_id=2207529&limit=2&type=endless&user_id=1199599";
+
+}
+
 
 
 function json_response($message = null, $code = 200)
