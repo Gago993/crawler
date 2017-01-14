@@ -3,9 +3,10 @@ $(document).ready(function(){
 	var gigName = $("#gigName");
 	var totalNumberOrders = $("#totalNumberOrders");
 	var gigInfo = $("#gigInfo");
+	var submit = $("#submit");
+	var error = $("#error");
 	var list = '<li class="list-group-item list-group-item-info">';
 	var listEnd = '</li>';
-	var submit = $("#submit");
 
 	$("#submit").click(function(){
 		var name = $("#username").val();
@@ -17,6 +18,7 @@ $(document).ready(function(){
 			cache: false,
 			success: function(result){
 				gigLayout.removeClass("hidden");
+				error.addClass("hidden");
 				var html = "";
 				for (var i = 0; i < result.message.pageDetails.length; i++) {
 					var detail = result.message.pageDetails[i];
@@ -29,8 +31,9 @@ $(document).ready(function(){
 				gigInfo.html(html);
 			},
 			error: function(xhr, desc, err) {
-		        console.log(xhr);
-		        console.log("Details: " + desc + "\nError:" + err);
+				console.log(xhr);
+				error.removeClass("hidden");
+				gigLayout.addClass("hidden");
 	      	}
 		});
 	});
