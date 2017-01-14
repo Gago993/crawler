@@ -7,7 +7,7 @@
  */
 require('lib/simple_html_dom.php');
 
-
+/*
 $testCase = array(
     "totalQueueOrders" => 6,
     "username" => "gigblast",
@@ -28,11 +28,51 @@ return;
 // if you are doing ajax with application-json headers
 if (empty($_POST) || isset($_POST["username"])) {
     echo json_response("Input not valid", 400);
+}*/
+
+
+$htmlResponse = curlApiWrapper("https://www.fiverr.com/", "gigblast");
+
+/*$htmlResponse = preg_replace("/<script[\s\S]*?>[\s\S]*?<\/script>/", "", $htmlResponse);
+$htmlResponse = preg_replace("/<link[\s\S]*?>/", "", $htmlResponse);
+$htmlResponse = preg_replace("/<meta[\s\S]*?>/", "", $htmlResponse);*/
+preg_match("/data-json-path=\"(.*?)\"/si", $htmlResponse, $matches);
+
+if(!empty($matches)){
+    $match = $matches[0];
+    $match = str_replace("data-json-path=\"","",$match);
+    $match = str_replace("\"","", $match);
+
+    $test = curlApiWrapper("https://www.fiverr.com/", $match);
+
+    $fiverJobsArray = json_decode($test,true)["gigs"];
+
+    foreach($fiverJobsArray as $job) { //foreach element in $arr
+        if(isset($job["is_best_seller"])){ continue;}
+        var_dump($job["title"]);
+        var_dump($job["gig_url"]);
+        echo "<br/>";
+    }
+
+
+    return;
 }
 
-curlApiWrapper();
+return;
+//$htmlResponse = preg_replace("/<html>/", "", $htmlResponse);
+$html = str_get_html($htmlResponse);
+
+//var_dump("" .$htmlResponse ."");
+$ret = $html->find('*[data-json-path]',0);
+
+
+
+echo $tag;
+//echo json_encode($html);
 
 return;
+
+
 
 //function getDataFrom
 
@@ -57,17 +97,20 @@ function json_response($message = null, $code = 200)
     header('Status: '.$status[$code]);
     // return the encoded json
 
-    return json_encode(array(
+    return json_encode($message);
+   /* return json_encode(array(
         'status' => $code < 300, // success or not?
         'message' => $message
-    ));
+    ));*/
 }
 
-function curlApiWrapper(){
+function curlApiWrapper($site, $username){
     $ch = curl_init();
 
     $apiKey = "39a187a98ba34356b6fcf900da4a29ab";
-    $url = 'https://twitter.com/';
+    //$url = 'https://www.fiverr.com/' . $username;
+
+    $url = $site . $username;
     $proxy = 'proxy.crawlera.com:8010';
     //$proxy_auth = '<API KEY>:';
     $proxy_auth = $apiKey;
@@ -75,7 +118,11 @@ function curlApiWrapper(){
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_PROXY, $proxy);
     curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_auth);
-    curl_setopt($ch, CURLOPT_HEADER, 1);
+    //curl_setopt($ch, CURLOPT_HEADER, 1);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ));
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
