@@ -10,7 +10,8 @@ require('lib/simple_html_dom.php');
 
 $testCase = array(
     "totalQueueOrders" => 6,
-    "PageDetails" => array(
+    "username" => "gigblast",
+    "pageDetails" => array(
         new PageDetails("first title", 3),
         new PageDetails("second title", 5),
         new PageDetails("third title", 7),
@@ -28,6 +29,12 @@ return;
 if (empty($_POST) || isset($_POST["username"])) {
     echo json_response("Input not valid", 400);
 }
+
+curlApiWrapper();
+
+return;
+
+//function getDataFrom
 
 
 function json_response($message = null, $code = 200)
@@ -59,9 +66,11 @@ function json_response($message = null, $code = 200)
 function curlApiWrapper(){
     $ch = curl_init();
 
+    $apiKey = "39a187a98ba34356b6fcf900da4a29ab";
     $url = 'https://twitter.com/';
     $proxy = 'proxy.crawlera.com:8010';
-    $proxy_auth = '<API KEY>:';
+    //$proxy_auth = '<API KEY>:';
+    $proxy_auth = $apiKey;
 
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_PROXY, $proxy);
@@ -71,11 +80,17 @@ function curlApiWrapper(){
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-    curl_setopt($ch, CURLOPT_CAINFO, '/path/to/crawlera-ca.crt');
+    curl_setopt($ch, CURLOPT_CAINFO, realpath('certificate/crawlera-ca.crt'));
 
     $scraped_page = curl_exec($ch);
+
+    if(!$scraped_page) {
+        $test = curl_error($ch);
+        var_dump($test);
+    }
+
     curl_close($ch);
-    echo $scraped_page;
+    return $scraped_page;
 }
 
 
