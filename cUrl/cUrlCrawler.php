@@ -7,11 +7,27 @@
  */
 require('lib/simple_html_dom.php');
 
+
+$testCase = array(
+    "totalQueueOrders" => 6,
+    "PageDetails" => array(
+        new PageDetails("first title", 3),
+        new PageDetails("second title", 5),
+        new PageDetails("third title", 7),
+        new PageDetails("forth title", 1),
+        new PageDetails("fifth title", 5),
+        new PageDetails("sixth title", 7)
+    )
+);
+
+echo json_response($testCase);
+
+return;
+
 // if you are doing ajax with application-json headers
 if (empty($_POST) || isset($_POST["username"])) {
-    return json_response("Input not valid", 400);
+    echo json_response("Input not valid", 400);
 }
-
 
 
 function json_response($message = null, $code = 200)
@@ -33,6 +49,7 @@ function json_response($message = null, $code = 200)
     // ok, validation error, or failure
     header('Status: '.$status[$code]);
     // return the encoded json
+
     return json_encode(array(
         'status' => $code < 300, // success or not?
         'message' => $message
@@ -61,6 +78,32 @@ function curlApiWrapper(){
     echo $scraped_page;
 }
 
+
+class PageDetails {
+    public $title;
+    public $numQueueOrders;
+
+    function __construct($title, $numQueueOrders) {
+        $this->title = $title;
+        $this->numQueueOrders = $numQueueOrders;
+    }
+
+    public function settitle($title){
+        $this->title=$title;
+    }
+
+    public function setcount($numQueueOrders){
+        $this->numQueueOrders=$numQueueOrders;
+    }
+
+    public function gettitle(){
+        return $this->title;
+    }
+
+    public function getcount(){
+        return $this->numQueueOrders;
+    }
+}
 
 ?>
 
