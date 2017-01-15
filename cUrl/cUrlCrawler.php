@@ -1,131 +1,87 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: gognj_000
- * Date: 1/14/2017
- * Time: 1:54 PM
- */
-/*require('lib\vendor\autoload.php');
-use PHPHtmlParser\Dom;*/
 
-/*
-$testCase = array(
-    "totalQueueOrders" => 6,
-    "username" => "gigblast",
-    "pageDetails" => array(
-        new PageDetails("first title", 3),
-        new PageDetails("second title", 5),
-        new PageDetails("third title", 7),
-        new PageDetails("forth title", 1),
-        new PageDetails("fifth title", 5),
-        new PageDetails("sixth title", 7)
-    )
-);
-
-echo json_response($testCase);
-
-return;
-
-// if you are doing ajax with application-json headers
-if (empty($_POST) || isset($_POST["username"])) {
-    echo json_response("Input not valid", 400);
-}*/
-
-/*$t = "234 Orders in Queue\t";
-$b = getFirstNumberInString($t);
-var_dump($t);
-var_dump($b);
-return;*/
-
-
-
-/*
-$gigResponse = curlApiWrapper("https://www.fiverr.com/", "/gigblast/design-2-awesome-business-cards-or-visiting-cards");
-preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
-
-var_dump($gigResponse);
-
-return;
-*/
 ini_set('max_execution_time', 123456);
-$htmlResponse = curlApiWrapper("https://www.fiverr.com/", "gigblast");
 
+if (empty($_POST) || !isset($_POST["username"])) {
+    echo json_response("Please insert username", 400);
+}
 
-
-/*$dom = new Dom;
-$dom->load($htmlResponse);
-$a = $dom->find('div[data-json-path]')[0];
-var_dump($a);
-echo $a->text; // "click here"
-//var_dump($dom);
-
+$username = $_POST["username"];
+$response = crawlFiverrUserGigs($username);
+echo $response;
 return;
-*/
 
-preg_match("/data-json-path=\"(.*?)\"/si", $htmlResponse, $matches);
+function crawlFiverrUserGigs($user)
+{
+    $htmlResponse = curlApiWrapper("https://www.fiverr.com/", $user);
 
+    if(!isset($htmlResponse) || is_null($htmlResponse)){
+        echo json_response("User not valid", 400);
+        return;
+    }
 
+    preg_match("/data-json-path=\"(.*?)\"/si", $htmlResponse, $matches);
 
-if(!empty($matches)){
+    if(!isset($matches) || is_null($matches) || empty($matches) || !isset($matches[0])){
+        echo json_response("User not valid", 400);
+        return;
+    }
+
     $match = $matches[0];
-    $match = str_replace("data-json-path=\"","",$match);
-    $match = str_replace("\"","", $match);
+    $match = str_replace("data-json-path=\"", "", $match);
+    $match = str_replace("\"", "", $match);
 
-    $ageDetailsArray = array();
+    if(!isset($match) || is_null($match) || empty($match)){
+        echo json_response("User not valid", 400);
+        return;
+    }
 
-    $jobResponse = curlApiWrapper("https://www.fiverr.com/", $match);
+    $pageDetailsArray = array();
+    $totalQueueOrders = 0;
 
-    $fiverJobsArray = json_decode($jobResponse,true)["gigs"];
+    $gigsResponse = curlApiWrapper("https://www.fiverr.com/", $match);
 
-    foreach($fiverJobsArray as $job) { //foreach element in $arr
-        if(isset($job["is_best_seller"])){ continue;}
+    if(!isset($gigsResponse) || is_null($gigsResponse)){
+        echo json_response("User not valid", 400);
+        return;
+    }
+
+    $fiverJobsJson = json_decode($gigsResponse, true);
+    if(!isset($fiverJobsJson["gigs"])){
+        return json_response("User has no gigs", 400);
+    }
+
+    $fiverJobsArray = $fiverJobsJson["gigs"];
+
+    foreach ($fiverJobsArray as $job) { //foreach element in $arr
+        if (isset($job["is_best_seller"])) {
+            continue;
+        }
 
         $gigTitle = $job["title"];
         $gigUrl = $job["gig_url"];
 
-        var_dump($gigTitle);
-        var_dump($gigUrl);
-
-
         $gigResponse = curlApiWrapper("https://www.fiverr.com/", $gigUrl);
-
         preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
 
-
-        if(!isset($gigMatches) || empty($gigMatches)){
-            var_dump("0");
+        if (!isset($gigMatches) || empty($gigMatches)) {
             $queueNumber = "0";
-        }else{
+        } else {
             $queueNumber = preg_replace("/[^0-9 ]/", "", $gigMatches[0]);
             $queueNumber = getFirstNumberInString($queueNumber);
-
-            var_dump($queueNumber);
+            $totalQueueOrders += (int)$queueNumber;
         }
 
-        var_dump("<br/>");
         $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber);
     }
-    return;
-    echo json_encode($pageDetailsArray);
-}
 
+    $responsePageDetailsArray = array(
+        "username" => $user,
+        "totalQueueOrders" => $totalQueueOrders,
+        "pageDetails" => $pageDetailsArray
+    );
 
-
-
-function getFirstNumberInString($string){
-    if(!isset($string) || is_null($string))
-        return "";
-    $string = trim($string);
-    preg_match('/[0-9]*/si', $string, $m);
-    return $m[0];
-}
-
-
-
-function getGigQuery($gigId, $userId){
-
-    "/gigs/other_gigs_by?gig_id=2207529&limit=2&type=endless&user_id=1199599";
-
+    return json_response($responsePageDetailsArray);
 }
 
 
@@ -161,11 +117,9 @@ function curlApiWrapper($site, $username){
     $ch = curl_init();
 
     $apiKey = "39a187a98ba34356b6fcf900da4a29ab";
-    //$url = 'https://www.fiverr.com/' . $username;
 
     $url = $site . $username;
     $proxy = 'proxy.crawlera.com:8010';
-    //$proxy_auth = '<API KEY>:';
     $proxy_auth = $apiKey;
 
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -186,11 +140,19 @@ function curlApiWrapper($site, $username){
 
     if(!$scraped_page) {
         $test = curl_error($ch);
-        var_dump($test);
+        return null;
     }
 
     curl_close($ch);
     return $scraped_page;
+}
+
+function getFirstNumberInString($string){
+    if(!isset($string) || is_null($string))
+        return "";
+    $string = trim($string);
+    preg_match('/[0-9]*/si', $string, $m);
+    return $m[0];
 }
 
 
