@@ -2,11 +2,11 @@
 
 ini_set('max_execution_time', 123456);
 
-if (empty($_POST) || !isset($_POST["username"])) {
+if (empty($_GET) || !isset($_GET["username"])) {
     echo json_response("Please insert username", 400);
 }
 
-$username = $_POST["username"];
+$username = $_GET["username"];
 $response = crawlFiverrUserGigs($username);
 echo $response;
 return;

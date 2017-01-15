@@ -32,14 +32,14 @@ $(document).ready(function(){
 	};
 	var spinner = new Spinner(opts);
 
-	$("#submit").click(function(){
-
+	$("form").submit(function(e){
+		e.preventDefault();
 		startSpinner();
 
 		var name = $("#username").val();
 
 		$.ajax({
-			type: "POST",
+			type: "GET",
 			url: "cUrlCrawler.php",
 			data: {"username" : name},
 			cache: false,
@@ -67,6 +67,12 @@ $(document).ready(function(){
 				gigLayout.addClass("hidden");
 	      	}
 		});
+
+		return false;
+	});
+
+	$("#submit").click(function(){
+		$("form").submit();
 	});
 
 	function startSpinner(){
