@@ -1,30 +1,33 @@
 <?php
-
+// Start of the script
 ini_set('max_execution_time', 123456);
 
 if (empty($_GET) || !isset($_GET["username"])) {
-    echo json_response("Please insert username", 400);
+	exitWithError("HTTP/1.1 400 Invalid data", "Empty query param: username");
 }
 
 $username = $_GET["username"];
 $response = crawlFiverrUserGigs($username);
-echo $response;
-return;
 
+die(json_encode($response));
+// End of the script
+
+// Helper functions
 function crawlFiverrUserGigs($user)
 {
+	// Fetch the user profile web page
     $htmlResponse = curlApiWrapper("https://www.fiverr.com/", $user);
 
     if(!isset($htmlResponse) || is_null($htmlResponse)){
-        echo json_response("User not valid", 400);
-        return;
+    	exitWithError("HTTP/1.1 400 Invalid data", "User not valid 1");
     }
 
+    // Find the api url which is hidden in the html of the user profile web page. 
+    // This api returns json which includes the list of all gigs for the user and a link to each gig web page
     preg_match("/data-json-path=\"(.*?)\"/si", $htmlResponse, $matches);
 
     if(!isset($matches) || is_null($matches) || empty($matches) || !isset($matches[0])){
-        echo json_response("User not valid", 400);
-        return;
+    	exitWithError("HTTP/1.1 400 Invalid data", "User not valid 2");
     }
 
     $match = $matches[0];
@@ -32,31 +35,34 @@ function crawlFiverrUserGigs($user)
     $match = str_replace("\"", "", $match);
 
     if(!isset($match) || is_null($match) || empty($match)){
-        echo json_response("User not valid", 400);
-        return;
+    	exitWithError("HTTP/1.1 400 Invalid data", "User not valid 3");
     }
 
     $pageDetailsArray = array();
     $totalQueueOrders = 0;
 
+    // Call the previously fetched api from the web page in order to get the json for the list of all gigs for the user
     $gigsResponse = curlApiWrapper("https://www.fiverr.com/", $match);
 
     if(!isset($gigsResponse) || is_null($gigsResponse)){
-        echo json_response("User not valid", 400);
-        return;
+    	exitWithError("HTTP/1.1 400 Invalid data", "User not valid 4");
     }
+
     $fiverJobsJson = json_decode($gigsResponse, true);
     if(!isset($fiverJobsJson["gigs"])){
-        return json_response("User has no gigs", 400);
+    	exitWithError("HTTP/1.1 400 Invalid data", "We could not find any gigs records for this user");
     }
 
     $fiverJobsArray = $fiverJobsJson["gigs"];
     
-    // Setup requests
+    // Setup multithreaded curl requests
     $mh = curl_multi_init();
     $chs = array();
 
+    // Foreach gig prepare the curl request that will be send in order to get each gig web page. Add the curl request
+    // to an array for later retreival of the response
     foreach ($fiverJobsArray as $job) {
+    	// If the user is a best seller we don't need to include that gig entry since it is a duplicate. It is included on the other gigs
     	if (isset($job["is_best_seller"])) {
             continue;
         }
@@ -64,22 +70,23 @@ function crawlFiverrUserGigs($user)
         $gigUrl = $job["gig_url"];
 
         $ch = curlMultiApiWrapper("https://www.fiverr.com/", $gigUrl);
-        array_push($chs, [ 'ch' => $ch, 'title'=>$gigTitle]);
+        array_push($chs, array('ch' => $ch, 'title'=>$gigTitle));
         curl_multi_add_handle($mh, $ch);
     }
 
-      // execute all queries simultaneously, and continue when all are complete
+      // Execute all requests simultaneously, and continue when all are complete
 	  $running = null;
 	  do {
-	    curl_multi_exec($mh, $running);
+	    	curl_multi_exec($mh, $running);
 	  } while ($running);
 
-	  // Close connections
+	  // Close all curl connections
 	  foreach ($chs as $ch) {
 	  		curl_multi_remove_handle($mh, $ch['ch']);
 	  }
 	  curl_multi_close($mh);
 
+	  // Iterate over the curl connections and get the response out of each
 	  foreach ($chs as $ch) {
 	  	 $gigResponse = curl_multi_getcontent($ch['ch']);
 	  	 preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
@@ -93,40 +100,9 @@ function crawlFiverrUserGigs($user)
         }
 
         $gigTitle = $ch['title'];
-        $time = 1;
-        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber, $time);
+        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber);
 	  }
 
-    /*foreach ($fiverJobsArray as $job) { //foreach element in $arr
-        if (isset($job["is_best_seller"])) {
-            continue;
-        }
-
-        $gigTitle = $job["title"];
-        $gigUrl = $job["gig_url"];
-
-
-        //start timer
-        $time_start = microtime(true);
-
-        $gigResponse = curlApiWrapper("https://www.fiverr.com/", $gigUrl);
-        preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
-
-        //end timer
-        $time_end = microtime(true);
-        $time = $time_end - $time_start;
-
-
-        if (!isset($gigMatches) || empty($gigMatches)) {
-            $queueNumber = "0";
-        } else {
-            $queueNumber = preg_replace("/[^0-9 ]/", "", $gigMatches[0]);
-            $queueNumber = getFirstNumberInString($queueNumber);
-            $totalQueueOrders += (int)$queueNumber;
-        }
-
-        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber, $time);
-    }*/
 
     $responsePageDetailsArray = array(
         "username" => $user,
@@ -134,36 +110,7 @@ function crawlFiverrUserGigs($user)
         "pageDetails" => $pageDetailsArray
     );
 
-    return json_response($responsePageDetailsArray);
-}
-
-
-
-function json_response($message = null, $code = 200)
-{
-    // clear the old headers
-    header_remove();
-    // set the actual code
-    http_response_code($code);
-    // set the header to make sure cache is forced
-    header("Cache-Control: no-transform,public,max-age=300,s-maxage=900");
-    // treat this as json
-    header('Content-Type: application/json');
-    $status = array(
-        200 => '200 OK',
-        400 => '400 Bad Request',
-        422 => 'Unprocessable Entity',
-        500 => '500 Internal Server Error'
-    );
-    // ok, validation error, or failure
-    header('Status: '.$status[$code]);
-    // return the encoded json
-
-    return json_encode($message);
-   /* return json_encode(array(
-        'status' => $code < 300, // success or not?
-        'message' => $message
-    ));*/
+    return $responsePageDetailsArray;
 }
 
 function curlMultiApiWrapper($site, $username){
@@ -178,7 +125,6 @@ function curlMultiApiWrapper($site, $username){
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_PROXY, $proxy);
     curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_auth);
-    //curl_setopt($ch, CURLOPT_HEADER, 1);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         'Content-Type: application/json',
         'Accept: application/json'
@@ -204,7 +150,6 @@ function curlApiWrapper($site, $username){
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_PROXY, $proxy);
     curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_auth);
-    //curl_setopt($ch, CURLOPT_HEADER, 1);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         'Content-Type: application/json',
         'Accept: application/json'
@@ -234,16 +179,21 @@ function getFirstNumberInString($string){
     return $m[0];
 }
 
+function exitWithError($header, $exitMessage)
+{
+  header($header);
+  exit($exitMessage);
+}
+
 
 class PageDetails {
     public $title;
     public $numQueueOrders;
     public $time;
 
-    function __construct($title, $numQueueOrders, $time) {
+    function __construct($title, $numQueueOrders) {
         $this->title = $title;
         $this->numQueueOrders = $numQueueOrders;
-        $this->time = $time;
     }
 
     public function settitle($title){

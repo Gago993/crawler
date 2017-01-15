@@ -40,9 +40,10 @@ $(document).ready(function(){
 
 		$.ajax({
 			type: "GET",
-			url: "cUrlCrawler.php",
+			url: "crawler.php",
 			data: {"username" : name},
 			cache: false,
+			dataType: "json",
 			success: function(result){
 				stopSpinner();
 				gigLayout.removeClass("hidden");
@@ -51,8 +52,8 @@ $(document).ready(function(){
 				for (var i = 0; i < result.pageDetails.length; i++) {
 					var detail = result.pageDetails[i];
 					var htmlNode = list + "Title: " + detail.title + " <br /> "
-						+ "Number of orders: " + detail.numQueueOrders + "<br />"
-						+ "Page Scraping Time: " + detail.time + " sec." + listEnd;
+						+ "Number of orders: " + detail.numQueueOrders + listEnd;
+						//+ "Page Scraping Time: " + detail.time + " sec." + listEnd;
 					html += htmlNode;
 				}
 
