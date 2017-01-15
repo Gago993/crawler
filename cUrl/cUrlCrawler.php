@@ -51,8 +51,53 @@ function crawlFiverrUserGigs($user)
     }
 
     $fiverJobsArray = $fiverJobsJson["gigs"];
+    
+    // Setup requests
+    $mh = curl_multi_init();
+    $chs = array();
 
-    foreach ($fiverJobsArray as $job) { //foreach element in $arr
+    foreach ($fiverJobsArray as $job) {
+    	if (isset($job["is_best_seller"])) {
+            continue;
+        }
+    	$gigTitle = $job["title"];
+        $gigUrl = $job["gig_url"];
+
+        $ch = curlMultiApiWrapper("https://www.fiverr.com/", $gigUrl);
+        array_push($chs, [ 'ch' => $ch, 'title'=>$gigTitle]);
+        curl_multi_add_handle($mh, $ch);
+    }
+
+      // execute all queries simultaneously, and continue when all are complete
+	  $running = null;
+	  do {
+	    curl_multi_exec($mh, $running);
+	  } while ($running);
+
+	  // Close connections
+	  foreach ($chs as $ch) {
+	  		curl_multi_remove_handle($mh, $ch['ch']);
+	  }
+	  curl_multi_close($mh);
+
+	  foreach ($chs as $ch) {
+	  	 $gigResponse = curl_multi_getcontent($ch['ch']);
+	  	 preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
+
+        if (!isset($gigMatches) || empty($gigMatches)) {
+            $queueNumber = "0";
+        } else {
+            $queueNumber = preg_replace("/[^0-9 ]/", "", $gigMatches[0]);
+            $queueNumber = getFirstNumberInString($queueNumber);
+            $totalQueueOrders += (int)$queueNumber;
+        }
+
+        $gigTitle = $ch['title'];
+        $time = 1;
+        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber, $time);
+	  }
+
+    /*foreach ($fiverJobsArray as $job) { //foreach element in $arr
         if (isset($job["is_best_seller"])) {
             continue;
         }
@@ -81,7 +126,7 @@ function crawlFiverrUserGigs($user)
         }
 
         $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber, $time);
-    }
+    }*/
 
     $responsePageDetailsArray = array(
         "username" => $user,
@@ -119,6 +164,32 @@ function json_response($message = null, $code = 200)
         'status' => $code < 300, // success or not?
         'message' => $message
     ));*/
+}
+
+function curlMultiApiWrapper($site, $username){
+	$ch = curl_init();
+
+    $apiKey = "39a187a98ba34356b6fcf900da4a29ab";
+
+    $url = $site . $username;
+    $proxy = 'proxy.crawlera.com:8010';
+    $proxy_auth = $apiKey;
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_PROXY, $proxy);
+    curl_setopt($ch, CURLOPT_PROXYUSERPWD, $proxy_auth);
+    //curl_setopt($ch, CURLOPT_HEADER, 1);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ));
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CAINFO, realpath('certificate/crawlera-ca.crt'));
+
+    return $ch;
 }
 
 function curlApiWrapper($site, $username){
