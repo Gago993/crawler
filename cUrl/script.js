@@ -50,7 +50,9 @@ $(document).ready(function(){
 				var html = "";
 				for (var i = 0; i < result.pageDetails.length; i++) {
 					var detail = result.pageDetails[i];
-					var htmlNode = list + "Title: " + detail.title + " <br /> " + "Number of orders: " + detail.numQueueOrders + listEnd;
+					var htmlNode = list + "Title: " + detail.title + " <br /> "
+						+ "Number of orders: " + detail.numQueueOrders + "<br />"
+						+ "Page Scraping Time: " + detail.time + " sec." + listEnd;
 					html += htmlNode;
 				}
 

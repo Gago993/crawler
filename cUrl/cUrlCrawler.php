@@ -45,7 +45,6 @@ function crawlFiverrUserGigs($user)
         echo json_response("User not valid", 400);
         return;
     }
-
     $fiverJobsJson = json_decode($gigsResponse, true);
     if(!isset($fiverJobsJson["gigs"])){
         return json_response("User has no gigs", 400);
@@ -61,8 +60,17 @@ function crawlFiverrUserGigs($user)
         $gigTitle = $job["title"];
         $gigUrl = $job["gig_url"];
 
+
+        //start timer
+        $time_start = microtime(true);
+
         $gigResponse = curlApiWrapper("https://www.fiverr.com/", $gigUrl);
         preg_match("/<span class=\"stats-row\">[A-Z0-9 _]*<\/span>/si", $gigResponse, $gigMatches);
+
+        //end timer
+        $time_end = microtime(true);
+        $time = $time_end - $time_start;
+
 
         if (!isset($gigMatches) || empty($gigMatches)) {
             $queueNumber = "0";
@@ -72,7 +80,7 @@ function crawlFiverrUserGigs($user)
             $totalQueueOrders += (int)$queueNumber;
         }
 
-        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber);
+        $pageDetailsArray[] = new PageDetails($gigTitle, $queueNumber, $time);
     }
 
     $responsePageDetailsArray = array(
@@ -159,10 +167,12 @@ function getFirstNumberInString($string){
 class PageDetails {
     public $title;
     public $numQueueOrders;
+    public $time;
 
-    function __construct($title, $numQueueOrders) {
+    function __construct($title, $numQueueOrders, $time) {
         $this->title = $title;
         $this->numQueueOrders = $numQueueOrders;
+        $this->time = $time;
     }
 
     public function settitle($title){
@@ -179,6 +189,14 @@ class PageDetails {
 
     public function getcount(){
         return $this->numQueueOrders;
+    }
+
+    public function gettime(){
+        return $this->time;
+    }
+
+    public function settime($time){
+        $this->time=$time;
     }
 }
 
